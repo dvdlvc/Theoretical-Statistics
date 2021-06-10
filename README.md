@@ -5,4 +5,4 @@ This repository contains the teaching material for my class [Advanced Statistica
 
 
 1. You find additional reading material about [optimal estimation](https://github.com/dvdlvc/Advanced-Statistical-Inference/blob/main/OptimalEstim_Additional_Material.zip) 
-2. You may downlad the R code to reproduce the statistical analysis of the network lawyers, as related to the set of slides having name "Network.pdf" and available on Moodle (at UNIGE). The analysis and the code are available in the html file Lazega.html.zip. You may dowload it and open it using your borwser. 
+2. You may downlad the R code to reproduce the statistical analysis of the network lawyers, as related to the set of slides having name "Network.pdf" and available on Moodle (at UNIGE). The analysis and the code are available in the html file [Lazega.html.zip](https://github.com/dvdlvc/Advanced-Statistical-Inference/blob/main/Lazega.html.zip). You may dowload it and open it using your borwser. 

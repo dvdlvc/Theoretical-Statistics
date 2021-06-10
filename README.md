@@ -1,4 +1,4 @@
-# Advanced-Statistical-Inference
+# Advanced Statistical Inference
 
 Teaching material (and more)
 

@@ -1,0 +1,289 @@
+---
+title: "Network of lawyers: statistical analysis"
+author: "Davide La Vecchia"
+date: " Academic year 2021-2022 (Fall semester)"
+output: html_document
+---
+
+
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(echo = TRUE) 
+```
+
+This script is adapted from the book
+[*Statistical Analysis of Network Data withR*](https://link.springer.com/book/10.1007/978-1-4939-0983-4), by E.D. Kolacyk
+and G. Csardi. I build on the R code and routines available in the book to illustrate the
+visualization and the fitting a of ERGMs. I refer to this book for the mathematical details and for additional discussion. 
+
+I will work with the <tt> lazega </tt>
+data set on collaboration  among lawyers---see below for details. Within <tt> R
+</tt> software, I rely on the <tt> ergm </tt> package, which is part of the <tt>
+statnet </tt> suite of packages. To run the code below you need to load <tt>
+library(sand) </tt>, <tt> sna </tt>, <tt> network </tt>, and  <tt> library(ergm) </tt> as in the lines here below.
+
+```{r dataset, echo=T} 
+#install.packages("sand") # run it if you do not have the package 
+#install.packages("ergm") # run it if you do not have the package
+library(sand) 
+library(ergm) 
+data(lazega) 
+```
+# Exploratory data analysis 
+
+## Visualize the network by means of a graph
+
+Let us start by a visualization of the network by means of a graph (which is a collection
+of nodes and vertices, as discussed in the set of slides "Network.pdf"). I display a part of a dataset on collaborative working
+relationships among members of a New England law firm, collected by Lazega.
+These data were collected for the purpose of studying cooperation among social
+actors in an organization, through the exchange of various types of resources
+among them. The organization observed was a law firm, consisting of over 70
+lawyers (roughly half partners and the other half associates) in three offices
+located in three different cities. Relational data reflecting resource exchange
+were collected, and additional attribute information was recorded for each
+lawyer, including type of practice, gender, and seniority.
+
+```{r network, out.width="150%",echo=T} 
+# Office location indicated by color.
+colbar <- c("red", "dodgerblue", "goldenrod") 
+v.colors <- colbar[V(lazega)$Office] # Type of practice indicated by vertex shape. 
+v.shapes <- c("circle", "square")[V(lazega)$Practice] # Vertex size proportional to years with firm. 
+v.size <- 3.5*sqrt(V(lazega)$Years) # Label vertices according to seniority. 
+v.label <- V(lazega)$Seniority 
+# Reproducible layout. 
+set.seed(123) 
+l<- layout.fruchterman.reingold(lazega) 
+plot(lazega, layout=l,
+vertex.color=v.colors, vertex.shape=v.shapes, vertex.size=v.size,
+vertex.label=v.label)
+```
+**Some comments**. This visual summary manages to combine a number of important
+aspects of these data in one diagram. A graph is used to represent the network,
+with vertices corresponding to lawyers, and edges depicting collaboration between
+pairs of lawyers. In addition, differences in vertex color, shape, size, and
+label are used to indicate office location, type of practice, years with the law
+firm, and seniority. This is far from the only manner in which to
+visualize these data. Deciding how best to do so is itself both an art and
+science. Furthermore, visualization is aided here by the fact that the network
+of lawyers is so small. Suppose instead our interest lay in a large on-line
+social network, such as the Facebook network of people that have ‘friended’ each
+other. With well over 1 billion active users reported as of this writing, it is
+impossible to display this network in an analogous manner, with every individual
+user and their friendships evident. A similar statement often can be made in
+biology, for example, such as for networks of proteins and their affinity for
+binding or of genes and their regulatory relationships.
+
+# Descriptive statistics
+
+Many questions that might be asked about a vertex in a network graph essentially seek to understand its ‘importance’ in the network. Which actors in the lawyers network seem to hold the ‘reins of power’? To answer this question we need to rely on *measures of centrality*, which are designed to quantify a notion of ‘importance’ and thereby facilitate the answering of such question.
+
+There are a vast number of different centrality measures that have been proposed over the years. Arguably, the most widely used measure of vertex centrality is vertex degree. [Let me remind the notion of the degree of a vertex $v$ which is defined as the number of edges incident on $v$.]. To have an idea of the degree distribution on the lawyers network, I resort on the function <tt> degree </tt>: for details see the [R help](https://www.rdocumentation.org/packages/sna/versions/2.6/topics/degree). 
+
+
+```{r degrees, echo=T} 
+d.lazega <- degree(lazega) 
+hist(d.lazega,col="blue", xlab="Degree", ylab="Frequency", main="Degree Distribution")
+```
+
+Centrality measures attempt to capture the notion that a vertex is ‘central’ if it is ‘close’ to many other vertices. An intuitively appealing way of displaying vertex centralities (for networks of small to moderate size) is to use a radial layout, with more central vertices located closer to the center. The function <tt> gplot.target </tt>, in the package <tt> sna </tt>, can be used for this purpose. For example,
+
+```{r centrality, echo=T} 
+library(sna)
+library(network)
+A <- get.adjacency(lazega, sparse=FALSE) 
+g <- network::as.network.matrix(A) 
+print(degree(g)) 
+```
+The central lawyer is the number 17, who has 30 connections (edges). This information can be depicted making use of a graphical, radial representation:
+
+```{r centrality_plot, out.width="150%", echo=T} 
+sna::gplot.target(g, degree(g), main="Degree", circ.lab = FALSE, circ.col="skyblue", usearrows = FALSE, vertex.col=c(rep("red", 16), "yellow", rep("red", 16)),  edge.col="darkgray")
+```
+
+# Statistical modeling via ERGMs
+
+Exponential random graph models (ERGMs) are designed in direct analogy to the
+classical generalized linear models (GLMs). They are formulated in a manner that
+is intended to facilitate the adaptation and extension of well-established
+statistical principles and methods for the construction, fitting, and comparison
+of models. Nevertheless, the appropriate specification and fitting of ERGMs can
+be decidedly more subtle than with standard GLMs. 
+
+For the basic ingredients of ERGMs I refer to the set of slides ``Network.pdf''.
+Here, we discuss the application of one of these models to the <tt> lazega </tt>
+dataset, where each $Y_{ij}$ can be either 0 (no edge) or 1 (there is an edge). Therefore,
+we deal with a Bernoulli random variable, for each pair $(i,j)$, and we study the probabiltiy of links (edges) between the lawyers.
+
+Since <tt> ergm </tt> uses the network package to represent network objects, I need to
+convert the <tt> igraph </tt> object <tt> lazega </tt> to the format used in
+<tt> statnet </tt>,  first separating the network into adjacency matrix and
+attributes. This is instrumental to set up the statistical model
+
+\begin{equation} 
+P_\theta(\boldsymbol{Y}=\boldsymbol{y}) =
+\frac{1}{\kappa(\theta)} \exp\{\theta L(\boldsymbol{y}) \} 
+\end{equation}
+where $L(\boldsymbol{y})= \sum_{i,j} y_{ij}$ and $y_{ij}$ is an edge between
+vertex $i$ and vertex $j$.
+
+To code in R that model we proceed as follows:
+```{r attributes, echo=T} 
+A <- get.adjacency(lazega) 
+v.attrs <-get.data.frame(lazega, what="vertices") 
+lazega.s <- network::as.network(as.matrix(A),directed=FALSE) 
+my.ergm.bern <- formula(lazega.s ~ edges) # set a simple Bernoulli model
+``` 
+
+in which case the statistic $L$ takes the value of the variable <tt> egdes </tt> 
+
+```{r edges, echo=T}
+summary(my.ergm.bern) 
+``` 
+
+The strength of ERGMs lies in the modeler's ability to
+specify more sophisticated models than the one discussed above, which relies only on
+one statistic $L(\boldsymbol{y})$. Doing so properly and effectively, however, requires some thought and care. To begin with, note that the model for $P_\theta(\boldsymbol{Y}=\boldsymbol{y})$ can
+be thought of as specifying that the log-odds of observing a given network $G$
+(or,more specifically, its adjacency matrix $\boldsymbol{y}$) is simply
+proportional to the number of edges in the network—arguably the most basic of
+network statistics. Traditionally, it has been of interest to also incorporate
+analogous statistics of higher-order global network structure, such as counts of
+$k$-stars, say $S_k(\boldsymbol{y})$, and of triangles, say $T(\boldsymbol{y})$.
+Frank and Strauss, show that models of the form
+
+\begin{equation} 
+P_\theta(\boldsymbol{Y}=\boldsymbol{y}) =
+\frac{1}{\kappa(\theta)} \exp\left\{\sum_{k=1}^{N_{v}-1}\theta_k
+S_k(\boldsymbol{y}) + \boldsymbol{\beta}' T(\boldsymbol{y}) \right\}, 
+\end{equation}
+
+where $N_v$ is the number of vertices in the graph $G$.
+In using such models, common practice has been to include star counts $S_k$ no
+higher than $k=2$,or at most $k=3$,by setting $\theta_4 =···=\theta_{N_{v−1}}
+=0$. For example, we may fit a more sophisticated model (Markovian which
+includes edges,  $k$-stars, and triangles)
+
+```{r Markow, echo=T} 
+my.ergm.Markov<-formula(lazega.s ~
+edges + kstar(2) + kstar(3)+ triangle) 
+summary(my.ergm.Markov) 
+```
+While simpler and, ideally, more interpretable, than the general formulation, experience
+nevertheless has shown this practice to frequently produce models that fit quite
+poorly to real data. Investigation of this phenomena has found it to be related
+to the issue of model degeneracy; see book [*Statistical Analysis of Network
+Data with R*](https://link.springer.com/book/10.1007/978-1-4939-0983-4).
+Unfortunately, the alternative—including a sufficiently large number of higher
+order terms—is problematic as well, from the perspective of model fitting.
+Anyway, let's go on and set up general statistics that can be used in <tt> ergm </tt> by specifying terms
+<tt> altkstar, gwdegree, or gwesp, </tt>  respectively, in the model. For
+example, 
+
+```{r Markow2, echo=T} 
+# or some more statistics
+my.ergm.Markov2<-formula(lazega.s ~ edges + gwesp(1, fixed=T))
+``` 
+and the statistics take values
+
+```{r Markow2bis, echo=T} 
+summary(my.ergm.Markov2) 
+``` 
+Note that all of the model specifications discussed
+so far involve statistics that are functions only of the network $\boldsymbol{y}$ (i.e.,
+controlling for endogenous effects). Yet it is natural to expect that the chance
+of an edge joining two vertices depends not only on the status (i.e., presence
+or absence) of edges between other vertex pairs, but also on attributes of the
+vertices themselves (i.e., allowing for assessment of exogenous effects). For
+attributes that have been measured, we can incorporate them into the types of
+ERGMs we have seen, in the form of additional statistics in the exponential
+term, with the normalization constant $\kappa(\theta)$ modified analogously.
+
+
+```{r attribs, echo=T} 
+
+lazega.s <- network::as.network(as.matrix(A),directed=FALSE)
+# attributes specification
+network::set.vertex.attribute(lazega.s, "Office",v.attrs$Office)
+network::set.vertex.attribute(lazega.s, "Practice",v.attrs$Practice)
+network::set.vertex.attribute(lazega.s, "Gender",v.attrs$Gender)
+network::set.vertex.attribute(lazega.s, "Seniority", v.attrs$Seniority)
+```
+
+In the R package <tt> ergm </tt>, ERGMs are fit using the function <tt> ergm </tt>, which implements a version of  Monte Carlo maximum likelihood estimation---
+namely, an approximate maximum likelihood estimator is returned; the approximation is due
+to the fact that the computation of the normalizing constant $\kappa(\boldsymbol(\theta))$ is numerically really demanding. 
+
+To get the MLE we first set up the model: 
+
+```{r MLE1, echo=T} 
+lazega.ergm <- formula(lazega.s ~ edges + gwesp(log(3), fixed=TRUE)
++ nodemain("Seniority")
++ nodemain("Practice")
++ match("Practice") + match("Gender") + match("Office"))
+```
+
+This specification allows for the control for the density of the network and some effects of transitivity---they are in the term <tt> gwesp(log(3), fixed=TRUE) </tt>. In formula:
+$$
+\begin{equation} 
+P_\boldsymbol\theta(\boldsymbol{Y}=\boldsymbol{y}) =
+\frac{1}{\kappa(\boldsymbol\theta),} \exp\left\{\theta_1
+S_1(\boldsymbol{y}) + \theta_2 \text{AT}(\boldsymbol{y}) + \boldsymbol{\beta}' \tilde g(\boldsymbol{x}) \right\}, 
+\end{equation}
+$$
+
+where $\boldsymbol\theta=(\theta_1,\theta_2,\boldsymbol\beta)'$ and 
+$\text{AT}(\boldsymbol{y})$ represents a second-order attribute statistic in the model 
+(alternating sum of triangles), controlling for transitivity. Specifically, for the lawyer 
+data, it is natural to ask to what extent two lawyers that both work with a third lawyer 
+are likely to work with each other as well. This notion corresponds to the social network 
+concept of transitivity and can be captured numerically through an enumeration of the 
+proportion of vertex triples that form triangles. In addition, it allows us to assess the 
+effect on the formation of collaborative ties among lawyers that is had by seniority, the 
+type of practice (i.e., corporate or litigation), and commonality of practice, gender, and 
+office location (all terms are in $\tilde g$).
+
+```{r MLE2, echo=T} 
+
+set.seed(123) 
+lazega.ergm.fit <-ergm(lazega.ergm, estimate = "MLE") 
+summary(lazega.ergm.fit) 
+
+``` 
+
+**Some comments.** In order to interpret the coefficients, it is useful to think in
+terms of the probability of a given vertex pair having an edge, conditional on
+the edge status between all the pairs, the so-called *ceteris paribus analysis*. Writing $\boldsymbol{Y}_{(−ij)}$ to be
+all of the elements of $\boldsymbol{Y}$ except $Y_{i j}$, the distribution of
+$Y_{i j}$ conditional on $\boldsymbol{Y}_{(−ij)}$  is Bernoulli and satisfies
+the expression
+$$
+\ln \left\{\frac{P_\theta(Y_{ij}=1\vert
+\boldsymbol{Y}_{(−ij)}= \boldsymbol{y}_{(−ij)})}{P_\theta(Y_{ij}=0\vert
+\boldsymbol{Y}_{(−ij)}= \boldsymbol{y}_{(−ij)})}
+\right\}=\boldsymbol{\theta}^t \Delta_{ij}(\boldsymbol{y})
+$$
+where $\Delta_{ij}(\boldsymbol{y})$  is the change statistic,
+denoting the difference between $g(\boldsymbol{y})$ when $y_{ij} =1$ and when $y_{ij} =0$, with $g(\boldsymbol{y})$ being a term of the log likelihood
+$$
+\ell(\theta) = \boldsymbol{\theta}^t g(\boldsymbol{y}) - \psi(\boldsymbol{\theta}).
+$$
+
+The estimated coefficient of each attribute statistic in this analysis may be interpreted as a conditional log-odds ratio for cooperation between lawyers. I refer to [*Statistical Analysis of Network Data withR*](https://link.springer.com/book/10.1007/978-1-4939-0983-4), by E.D. Kolacyk
+and G. Csardi, Ch. 6, section 6.2.3. Here, I provide two examples for the interpretation of the estimated coefficients. 
+
+1- Practicing corporate law, rather than litigation, increases the odds of cooperation by a factor of 
+$$
+\exp(0.3873) \approx 1.473,
+$$ 
+or nearly $47.3\%$. 
+
+2- Being of the same gender more than doubles the odds of cooperation, since 
+$$
+\exp(0.7215) ≈ 2.057.
+$$ 
+
+In all cases, such statements hold in the sense of `all else being equal’ (i.e., given no change among values of the other statistics). Note too that for all of the variables the coefficient differs from zero by at least one standard error, suggesting some nontrivial effect of these variables on the formation of network ties.
+
+Similarly, in terms of network structure, the magnitude of the coefficient $\theta_2 \approx 0.59$ for the alternating $k$-triangle statistic and the comparatively small corresponding standard error indicate that there is also evidence for a nontrivial transitivity effect. 
+
+Note that, given the inclusion of  transitivity in the model. So there is likely something other than similarity of gender, practice, and office at work here—possibly additional attributes we have not controlled for, or possibly social processes of team formation.

@@ -2,4 +2,4 @@
 
 Teaching material (and more)
 
-In this repository you may find the R code to reproduce the statistical analysis of the network lawyers, as related to the set of slides having name "Network.pdf" and available on Moodle (at UNIGE). The analysis and the code are available in the html file [Lazega.html](https://www.dropbox.com/s/3x00l9kijwfavg4/Lazega.html?dl=0): dowload it and open it using your borwser.
+In this repository you may find the R code to reproduce the statistical analysis of the network lawyers, as related to the set of slides having name "Network.pdf" and available on Moodle (at UNIGE). The analysis and the code are available in the html file Lazega.Rmd: dowload it and open it using your borwser.

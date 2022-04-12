@@ -4,9 +4,10 @@ This repository contains the teaching material for my class [Advanced Statistica
 
 
 
-1. You find additional reading material about [optimal estimation](https://github.com/dvdlvc/Advanced-Statistical-Inference/blob/main/OptimalEstim_Additional_Material.zip) 
-2. You find additional reading material about [M-estimation](https://github.com/dvdlvc/Advanced-Statistical-Inference/blob/main/M_estim_AdditionalExample.zip)  
-3. You may downlad the R code to reproduce the statistical analysis of the network lawyers, as related to the set of slides having name "Network.pdf" and available on Moodle (at UNIGE). The analysis and the code are available in the html file [Lazega.html.zip](https://github.com/dvdlvc/Advanced-Statistical-Inference/blob/main/Lazega.html.zip). You may dowload it and open it using your borwser. 
+1. Riemann and Lebesgue integrals
+2.  You find additional reading material about [optimal estimation](https://github.com/dvdlvc/Advanced-Statistical-Inference/blob/main/OptimalEstim_Additional_Material.zip) 
+3. You find additional reading material about [M-estimation](https://github.com/dvdlvc/Advanced-Statistical-Inference/blob/main/M_estim_AdditionalExample.zip)  
+4. You may downlad the R code to reproduce the statistical analysis of the network lawyers, as related to the set of slides having name "Network.pdf" and available on Moodle (at UNIGE). The analysis and the code are available in the html file [Lazega.html.zip](https://github.com/dvdlvc/Advanced-Statistical-Inference/blob/main/Lazega.html.zip). You may dowload it and open it using your borwser. 
 
 
-While you play with the code you may like to watch the following [video](https://www.youtube.com/watch?v=uHGlCi9jOWY&list=RDGMEMHDXYb1_DDSgDsobPsOFxpA&start_radio=1&rv=rk5ZQz93iGY) and think about your position: data sciencetist or statistician? Or both? 
+ 

@@ -1,4 +1,4 @@
-# Advanced Statistical Inference
+# Theoretical Statistics
 
 This repository contains the teaching material for my class [Advanced Statistical Inference](https://wwwi.unige.ch/cursus/programme-des-cours/web/teachings/details/2020-S403109?year=2020) at University of Geneva, in the [Master of Science in Statistics](https://www.unige.ch/gsem/en/programs/masters/statistics/). The teaching material for the class is available on the [Moodle page of the class](https://moodle.unige.ch).
 
